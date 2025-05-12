@@ -16,7 +16,13 @@ db.serialize(() => {
 
 });
 
-
+app.use(
+    session({
+        secret: "senhaforte",
+        resave: true,
+        saveUninitialized: true,
+    })
+);
 
 app.use('/static', express.static(__dirname + '/static'));
 
@@ -27,15 +33,15 @@ app.set('view engine', 'ejs');
 
 app.get("/", (req, res) => {
     console.log("GET /");
-    res.render("pages/index");
+    res.render("pages/index", { titulo: "index" });
 });
 
 app.get("/sobre", (req, res) => {
-    res.render("pages/sobre");
+    res.render("pages/sobre", { titulo: "index" });
     console.log("GET /sobre")
 });
 app.get("/cadastro", (req, res) => {
-    res.render("pages/cadastro");
+    res.render("pages/cadastro", { titulo: "index" });
     console.log("GET /cadastro")
 });
 app.post("/cadastro", (req, res) => {
@@ -63,7 +69,7 @@ app.post("/cadastro", (req, res) => {
 
 })
 app.get("/login", (req, res) => {
-    res.render("pages/login");
+    res.render("pages/login", { titulo: "index" });
     console.log("GET /login")
 });
 app.post("/login", (req, res) => {
@@ -76,25 +82,54 @@ app.post("/login", (req, res) => {
 
         console.log(JSON.stringify(row))
         if (row) {
+            // 2. se existir o usuario existir e a senha for válida BD, executar processo de login
+            req.session.username = username;
+            req.session.loggedin = true;
             res.redirect("/dashboard");
         } else {
+            // 3. se não, executar processo de negação de login
             res.send("usuário invalido")
         }
 
 
     })
-    // 2. se existir o usuario existir e a senha for válida BD, executar processo de login
 
-    // 3. se não, executar processo de negação de login
+
+
 
     console.log("POST /login")
     console.log(JSON.stringify(req.body));
 });
 
+
 app.get("/dashboard", (req, res) => {
-    res.render("pages/dashboard")
-    console.log("GET /dashboard")
+
+    if (req.session.loggedin) {
+
+        console.log("GET /dashboard")
+        //Listar todos usuarios 
+        const query = "SELECT * FROM users"
+        db.all(query, [], (err, row) => {
+    
+            if (err) throw err
+            res.render("pages/dashboard", { titulo: "index", dados: row });
+    
+        })
+    }
+    else{
+        res.send("Usuario não logado")
+    }
+ 
+
+
 });
+app.get("/logout", (req, res) => {
+    console.log("GET/logout");
+    req.session.destroy(()=>{
+        res.redirect("/login")
+    })
+});
+
 app.listen(PORT, () => {
     console.log(`Servidor sendo executado na porta ${PORT}`);
 });
